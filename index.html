@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title> </title>
+    <style>
+        /* 徹底的な無刺激・ミニマリズム空間 */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-touch-callout: none; /* 長押しメニュー禁止 */
+            -webkit-user-select: none;   /* テキスト選択禁止 */
+            user-select: none;
+            touch-action: manipulation;  /* ダブルタップズーム防止 */
+        }
+        body, html {
+            width: 100%;
+            height: 100%;
+            background-color: #000000;
+            color: #ffffff;
+            font-family: monospace; /* 感情を排除した等幅フォント */
+            overflow: hidden;
+            cursor: default;
+        }
+        /* タップ反応領域（画面全体） */
+        #game-stage {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+        /* カウンタ表示 */
+        #counter {
+            position: absolute;
+            font-size: 24px;
+            font-weight: normal;
+            /* 画面中央に初期配置 */
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            white-space: nowrap;
+            transition: none; /* アニメーションは一切排除 */
+        }
+    </style>
+</head>
+<body>
+
+    <div id="game-stage">
+        <div id="counter">0 / 100000</div>
+    </div>
+
+    <script>
+        const counterEl = document.getElementById('counter');
+        const stageEl = document.getElementById('game-stage');
+        
+        let count = 0;
+        const maxCount = 100000;
+        let lastTapTime = 0;
+        const minInterval = 500; // 0.5秒（500ミリ秒）未満の連打を無効化
+
+        function handleTap(e) {
+            // ブラウザのデフォルト動作（スクロールやズーム）を抑制
+            if (e.cancelable) e.preventDefault();
+
+            const currentTime = Date.now();
+            
+            // ドパガキ対策トラップ：高速連打の無効化
+            if (currentTime - lastTapTime < minInterval) {
+                // 最後にタップを試みた時間は更新しない（連打し続ける限りカウントが進まない仕様）
+                return;
+            }
+            
+            lastTapTime = currentTime;
+            count++;
+
+            // 究極の絶望：100,000到達で演出なく静かにリセット
+            if (count > maxCount) {
+                count = 0;
+            }
+
+            // カウンタの更新
+            counterEl.textContent = `${count} / ${maxCount}`;
+
+            // ながらスマホ対策：1000回ごとにランダム位置へ静かに移動
+            if (count > 0 && count % 1000 === 0) {
+                moveCounterRandomly();
+            } else if (count === 1 || count === 0) {
+                // リセット時、または最初の1回目のタイミングで（ずれている場合）中央に戻す
+                resetCounterPosition();
+            }
+        }
+
+        function moveCounterRandomly() {
+            // カウンタのサイズを取得して画面外へのはみ出しを防ぐ
+            const rect = counterEl.getBoundingClientRect();
+            const stageWidth = stageEl.clientWidth;
+            const stageHeight = stageEl.clientHeight;
+
+            // 安全な配置領域の計算
+            const maxX = stageWidth - rect.width;
+            const maxY = stageHeight - rect.height;
+
+            // ランダムな座標を算出（端に寄りすぎないよう調整）
+            const randomX = Math.max(10, Math.floor(Math.random() * maxX));
+            const randomY = Math.max(10, Math.floor(Math.random() * maxY));
+
+            // 中央揃えのtransformを解除し、絶対座標で配置
+            counterEl.style.transform = 'none';
+            counterEl.style.left = `${randomX}px`;
+            counterEl.style.top = `${randomY}px`;
+        }
+
+        function resetCounterPosition() {
+            counterEl.style.left = '50%';
+            counterEl.style.top = '50%';
+            counterEl.style.transform = 'translate(-50%, -50%)';
+        }
+
+        // マウスクリックとタッチイベントの両方に対応（二重カウント防止のため片方のみ実行）
+        stageEl.addEventListener('touchstart', handleTap, { passive: false });
+        stageEl.addEventListener('mousedown', function(e) {
+            // タッチデバイスでの二重発火を防止
+            if ('ontouchstart' in window) return;
+            handleTap(e);
+        });
+    </script>
+</body>
+</html>
